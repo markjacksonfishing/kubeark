@@ -17,5 +17,5 @@ This will ask you for your sudo password when executed. You must have sudo privi
 
 
 # Clean UP
-`kubectl delete deployment nginx-deployment -n devops`
+`kubectl delete deployment nginx-deployment -n ${NAMESPACE}`
 
