@@ -1,0 +1,125 @@
+#!/bin/bash
+
+#Name: KubeARK
+#Description: This is a Kubectl middleware designed to give template engine functionality to both locally and remotely hosted yaml files. This will allow you to store yamls in your github with bash variables and execute a single command to replace variables in line with the kubectl apply or create. This allows you to template remotely hosted yaml files for one line installs for customers.
+
+#Copyright (c) 2019 iDevOps.io Inc admin@idevops.io.
+#Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+args=("$@")
+
+#Declare variables.
+declare -a varArray=()
+declare -a sevarArray=()
+declare -a varKeys=()
+declare -a otherArgs=()
+fileName=""
+tempFile="no"
+
+########################## LOOP ARGUMENTS AND BUILT LIST OF VALUES TO LOOP ###########################
+
+for ((i=0; i < $#; i++))
+{
+
+    check_e=`echo -n ${args[$i]} | grep '\-e'`
+    check_f=`echo -n ${args[$i]} | grep '\-f'`
+    check_se=`echo -n ${args[$i]} | grep '\-se'`
+
+    if [ ! -z "${check_e}" ] || [ ! -z "${check_se}" ] || [ ! -z "${check_f}" ]; then
+        #Build Array of Specified Values.
+        if [ ! -z "${check_e}" ]; then
+            var=$(echo ${args[$i]} | sed -e 's/\-e//g')
+            varArray+=(${var})
+        fi
+
+        #Build Array of Secret Values for BASE64.
+        if [ ! -z "${check_se}" ]; then
+            var=$(echo ${args[$i]} | sed -e 's/\-se//g')
+            sevarArray+=(${var})
+        fi
+
+        #Download the file specified.
+        if [ ! -z "${check_f}" ]; then
+            fileName=$(echo  ${args[$i]} | sed -e 's/\-f//g')
+
+            if [[ $fileName == *"http"* ]]; then
+               tempFile="yes"
+               fileExist=`ls -lah ./ | grep $(basename ${fileName})`
+               echo $fileExist
+               if [ -z "$fileExist" ]; then
+                    curl -Os $fileName
+               else
+                    rm -rf ${fileName}
+                    curl -Os $fileName
+               fi
+            fi
+        fi
+    else
+            if [ "${args[$i]}" != "$(echo $1)" ]; then
+                otherArgs+=(${args[$i]})
+            fi
+    fi
+
+}
+
+########################## LOOP VARIABLE LIST AND SET ENVIRONMENT VARIABLES ###########################
+
+for i in "${varArray[@]}"
+do
+  :
+  key=`echo ${i} | cut -d '=' -f 1`
+  value=`echo ${i} | cut -d '=' -f 2`
+
+  export ${key}=${value}
+  export $(printf '%s\n' "$key" | awk '{ print toupper($0) }')=${value}
+
+  varKeys+=(${key})
+  varKeys+=($(printf '%s\n' "$key" | awk '{ print toupper($0) }'))
+
+done
+
+
+########################## LOOP SECRET VARIABLE LIST AND SET ENVIRONMENT VARIABLES ###########################
+
+for i in "${sevarArray[@]}"
+do
+  :
+  key=`echo ${i} | cut -d '=' -f 1`
+  value=`echo ${i} | cut -d '=' -f 2`
+  encodedValue=$(echo -n ${value} | base64)
+  export ${key}=${encodedValue}
+  export $(printf '%s\n' "$key" | awk '{ print toupper($0) }')=${encodedValue}
+  varKeys+=(${key})
+  varKeys+=($(printf '%s\n' "$key" | awk '{ print toupper($0) }'))
+done
+
+########################## VARIABLE REPLACEMENT ###########################
+
+renderTemplate() {
+eval "cat <<EOF
+$(<${1})
+EOF"
+}
+
+baseFileName=$(basename $fileName)
+templateOutput=`renderTemplate ${baseFileName}`
+#echo "${templateOutput}"
+
+if [ "${1}" == "apply" ] || [ "${1}" == "create" ]; then
+    echo "${templateOutput}" | kubectl $1 ${otherArgs[@]} -f -
+fi
+
+########################## CLEAN UP ###########################
+
+for i in "${varKeys[@]}"
+do
+  :
+  unset ${key}
+done
+
+if [ "$tempFile" == "yes" ]; then
+    rm -rf ./${baseFileName}
+fi
