@@ -1,6 +1,8 @@
 # Description
 KubeARK is a Kubectl middleware designed to give template engine functionality to both locally and remotely hosted yaml files. This will allow you to store yamls in your github with bash variables and execute a single command to replace variables in line with the Kubectl apply or create. This allows you to template remotely hosted YAML files for one line installs for customers.
 
+#Install
+sudo bash <(curl -s https://raw.githubusercontent.com/iDevOpsio/kubeark/master/installKubeArk.sh)
 
 # Test
 
@@ -14,3 +16,4 @@ KubeARK is a Kubectl middleware designed to give template engine functionality t
 
 # Clean UP
 `kubectl delete deployment nginx-deployment -n devops`
+
