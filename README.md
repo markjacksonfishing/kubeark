@@ -9,7 +9,7 @@ KubeARK is a Kubectl middleware designed to give template engine functionality t
 
 
 ## Remote File
-`kubeark apply -f"./nginx.test.yaml" -e"port=80" -n${NAMESPACE}`
+`kubeark apply -f"https://raw.githubusercontent.com/iDevOpsio/kubeark/master/nginx.test.yaml" -e"port=80" -n${NAMESPACE}`
 
 
 # Clean UP

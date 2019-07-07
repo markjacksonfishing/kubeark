@@ -48,7 +48,6 @@ for ((i=0; i < $#; i++))
             if [[ $fileName == *"http"* ]]; then
                tempFile="yes"
                fileExist=`ls -lah ./ | grep $(basename ${fileName})`
-               echo $fileExist
                if [ -z "$fileExist" ]; then
                     curl -Os $fileName
                else
