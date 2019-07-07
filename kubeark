@@ -1,6 +1,7 @@
 #!/bin/bash
 
 #Name: KubeARK
+#Ver: 1.0
 #Description: This is a Kubectl middleware designed to give template engine functionality to both locally and remotely hosted yaml files. This will allow you to store yamls in your github with bash variables and execute a single command to replace variables in line with the kubectl apply or create. This allows you to template remotely hosted yaml files for one line installs for customers.
 
 #Copyright (c) 2019 iDevOps.io Inc admin@idevops.io.
